@@ -15,6 +15,9 @@ puff-rs = { git = "https://github.com/bigmah/puff-rs", branch = "main" }
 libloading = "0.8"
 libc = "0.2"
 
+[workspace]
+members = [".", "bevy"]
+
 [profile.release]
 opt-level = 3
 debug = 1

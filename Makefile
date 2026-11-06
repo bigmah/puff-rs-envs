@@ -1,4 +1,4 @@
-.PHONY: setup trainer build play train eval sm64 sm64-state sm64-train sm64-explore sm64-robustify sm64-speedrun sm64-picture sm64-watch sm64-replay sm64-demo sm64-bench
+.PHONY: setup trainer build play train eval sm64 sm64-state sm64-train sm64-explore sm64-robustify sm64-speedrun sm64-picture sm64-watch sm64-replay sm64-demo sm64-bench bevy-train bevy-eval bevy-bench bevy-test
 
 # Which env to build and train: one in envs/. Each builds into a library of its own
 # (build/cenv_<env>.dylib, or .so), so building one leaves the others as they are.
@@ -116,3 +116,20 @@ sm64-demo: sm64
 # How many agent steps a second this machine manages, with N games at once
 sm64-bench: sm64
 	./build/sm64_tool bench $(or $(GAMES),8) 400 $(STAR_CONFIG)
+
+# --- Bevy envs (bevy/): Bevy + Avian physics, many arenas a world ----------------
+# Bevy 0.20 needs rustc 1.97+: these build with the 1.99 toolchain, the rest on stable
+BEVY_ENV ?= bevy_pusher
+BEVY_CARGO = cargo +1.99
+
+bevy-train:
+	$(BEVY_CARGO) run --release -p puffer-bevy --bin bevy-envs -- train $(BEVY_ENV) $(ARGS)
+
+bevy-eval:
+	$(BEVY_CARGO) run --release -p puffer-bevy --bin bevy-envs -- eval $(BEVY_ENV) latest --headless $(ARGS)
+
+bevy-bench:
+	$(BEVY_CARGO) run --release -p puffer-bevy --bin bevy-bench
+
+bevy-test:
+	$(BEVY_CARGO) test --release -p puffer-bevy

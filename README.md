@@ -89,6 +89,8 @@ envs/sm64/            sm64.h (the env), n64b_gym.h (the game process), sm64.c (s
 envs/bloons/          bloons.h (the env, around the bloons repo's native/btd3-env), bloons.ini
 envs/platformer/      platformer.h (the env), platformer.c (human play), platformer.ini
 envs/sort/, envs/kronecker_factorization/
+bevy/                 puffer-bevy: envs with Bevy + Avian physics (BevyEnv, Arenas),
+                      CartPole and Pusher, bevy-envs (pufferl for them), bevy-bench
 demos/peach-slide/    the slide's record runs: inputs, route traces, videos, notes
 demos/wild-blue/      Shoot into the Wild Blue's record run
 PLAN-text-agent.md    a plan for a text-prompted agent, frames in and actions out
@@ -271,6 +273,24 @@ The first track on easy, in the native Rust port of the game ([bigmah/bloons](ht
 make train ENV=bloons
 make eval ENV=bloons
 ```
+
+## Bevy envs
+
+`bevy/` is a crate of envs whose physics is [Bevy](https://bevy.org) with [Avian](https://github.com/avianphysics/avian): collisions, joints and friction come from the engine. An env implements `BevyEnv`: `spawn` builds one arena (bodies, colliders, joints) once, `reset` puts it where an episode starts (`teleport`), `act` applies an action, `observe` and `outcome` read it back. `Arenas` puts `[env] arenas` of them, 20 m apart, in one headless Bevy world stepped one physics tick a step, and is one pufferl env with an agent per arena; the vecenv steps a world per thread.
+
+- **bevy_cartpole:** gym's CartPole on a slider joint and a hinge. About 450 of 500 steps in 20M steps, 7 s.
+- **bevy_pusher:** top-down, a round agent shoves a box onto a goal in a walled room. About 93% solved in 100M steps, under a minute, on two seeds of three (seed 73, the default, stays at random's 11%).
+
+```sh
+make bevy-train BEVY_ENV=bevy_pusher
+make bevy-bench
+```
+
+Bevy 0.20 needs rustc 1.97 or newer, so the targets build with `cargo +1.99`; the rest of the repo still builds on stable. The crate is a workspace member of its own, so `cargo build --release` at the top does not compile Bevy.
+
+Speed on an M4 Pro (14 cores), physics alone (`make bevy-bench`), with 512 arenas a world: CartPole 1.2M steps/s a thread, 12M on all 14; Pusher 2.6M a thread, 26M on all 14. Training, the trainer's own time included: CartPole 3.1M steps/s, Pusher 1.9M. A world with a single arena manages only about 70K steps/s, so many arenas a world is what makes it fast.
+
+Don't despawn and respawn bodies between episodes: a world doing that slowed by half in 30 seconds (Avian keeps something per despawned body), where moving them back in place holds steady and is faster.
 
 ## The platformer
 
