@@ -1,0 +1,7 @@
+# Train against a puff-rs checkout beside this one instead of the one on GitHub:
+#
+#     cp .cargo/config.toml.example .cargo/config.toml
+#
+# .cargo/config.toml is gitignored, so this stays on your machine.
+[patch."https://github.com/bigmah/puff-rs"]
+puff-rs = { path = "../puff-rs" }

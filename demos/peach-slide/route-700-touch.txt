@@ -1,0 +1,26 @@
+demos/peach-slide/star-700-touch.demo: 349 inputs, 700 frames
+  frame   30  pos (  5001.8  6342.0  -5666.6)  fwd   34.68  action 03000888  (in the air)
+  frame   60  pos (  3725.2  6378.0  -5726.6)  fwd   44.79  action 03000888  (in the air)
+  frame   90  pos (  2127.1  5925.6  -5815.1)  fwd   74.03  action 00840452
+  frame  120  pos (  -657.6  5280.9  -5516.6)  fwd  100.16  action 00840452
+  frame  150  pos ( -3572.0  4606.8  -5168.4)  fwd  100.69  action 00840452
+  frame  180  pos ( -5738.6  4081.5  -3652.1)  fwd  101.16  action 00840452
+  frame  210  pos ( -5736.0  3666.8   -674.2)  fwd  101.38  action 00840452
+  frame  240  pos ( -4483.0  3106.2   1713.0)  fwd  101.54  action 00840452
+  frame  270  pos ( -1984.9  2945.3   1564.5)  fwd   73.49  action 03000880  (in the air)
+  frame  300  pos (    46.8   889.5   1248.8)  fwd   59.45  action 03000880  (in the air)
+  frame  330  pos (  1586.5 -1240.1    804.0)  fwd   48.62  action 00880456
+  frame  360  pos (  1951.4 -1498.4  -1023.4)  fwd   71.36  action 00880456
+  frame  390  pos (  1552.0 -2070.5  -3810.4)  fwd   99.53  action 00880456
+  frame  420  pos (   196.9 -2575.2  -6001.1)  fwd  100.76  action 00880456
+  frame  450  pos ( -1710.1 -3021.9  -4365.1)  fwd  100.29  action 00880456
+  frame  480  pos ( -4340.8 -3600.9  -3813.1)  fwd  100.79  action 00880456
+  frame  510  pos ( -6485.5 -3975.0  -2230.8)  fwd  100.54  action 00880456
+  frame  540  pos ( -6025.0 -4268.9    708.6)  fwd  100.91  action 00880456
+  frame  566 (134 before the end): a star spawns
+  frame  570  pos ( -5895.0 -4503.7   3194.3)  fwd  100.76  action 00880456
+  frame  600  pos ( -5895.0 -4503.7   3194.3)  fwd  100.76  action 00880456
+  frame  630  pos ( -5895.0 -4503.7   3194.3)  fwd  100.76  action 00880456
+  frame  660  pos ( -5895.0 -4503.7   3194.3)  fwd  100.76  action 00880456
+  frame  690  pos ( -6025.0 -4587.0   4144.7)  fwd   93.70  action 00880456
+pss-2 at frame 700, as it should be

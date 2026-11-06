@@ -1,0 +1,23 @@
+demos/wild-blue/star-656.demo: 328 inputs, 656 frames
+  frame   30  pos (  2625.9   521.9   4699.8)  fwd   24.00  action 03000880  (in the air)
+  frame   60  pos (  2560.0   521.9   4608.0)  fwd    0.00  action 08100340
+  frame   90  pos (  2857.3  1000.0   3929.0)  fwd   31.96  action 0100088c  (in the air)
+  frame  120  pos (  2659.6   954.6   3227.4)  fwd   31.45  action 03000880  (in the air)
+  frame  150  pos (  1780.1   978.0   2813.8)  fwd   31.76  action 010008a6  (in the air)
+  frame  180  pos (  1022.0  1402.0   2873.5)  fwd   31.08  action 0188088a  (in the air)
+  frame  210  pos (   218.2  1042.0   3384.7)  fwd   30.46  action 010008a6  (in the air)
+  frame  240  pos (  -829.2  1120.0   3947.3)  fwd   44.73  action 03000888  (in the air)
+  frame  270  pos ( -1713.7  1348.1   3607.4)  fwd   38.58  action 0188088a  (in the air)
+  frame  300  pos ( -2158.2  1007.4   2738.6)  fwd   28.38  action 010008a6  (in the air)
+  frame  330  pos ( -2182.6   705.3   1861.7)  fwd   26.21  action 04808459
+  frame  360  pos ( -2097.0   735.3    465.0)  fwd   50.70  action 03000888  (in the air)
+  frame  390  pos ( -2335.8   696.0   -526.0)  fwd   25.76  action 0188088a  (in the air)
+  frame  420  pos ( -2936.9   384.0  -1201.4)  fwd   23.55  action 00880456
+  frame  450  pos ( -2958.5   384.0  -1238.5)  fwd    0.00  action 00000385
+  frame  480  pos ( -3008.9   384.0  -1297.8)  fwd    0.00  action 80000588
+  frame  510  pos ( -2687.6   700.0  -1334.2)  fwd   19.65  action 018008ac  (in the air)
+  frame  540  pos ( -2143.7   621.8  -1405.4)  fwd   -8.00  action 010208b6  (in the air)
+  frame  570  pos ( -2165.3   486.5  -1335.7)  fwd    5.91  action 03000881  (in the air)
+  frame  600  pos ( -2475.8   481.9  -1286.1)  fwd   -4.02  action 03000881  (in the air)
+  frame  630  pos ( -2211.8   384.0  -1131.0)  fwd    9.26  action 00000443
+wf-3 at frame 656, as it should be

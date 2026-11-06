@@ -1,0 +1,20 @@
+[package]
+name = "puff-rs-envs"
+version = "0.1.0"
+edition = "2021"
+description = "Envs for puff-rs: Super Mario 64, Bloons TD 3 and PufferLib C envs"
+publish = false
+
+[[bin]]
+name = "pufferl"
+path = "src/main.rs"
+
+[dependencies]
+# The trainer. For a puff-rs checkout beside this one, see .cargo/config.toml.example
+puff-rs = { git = "https://github.com/bigmah/puff-rs", branch = "main" }
+libloading = "0.8"
+libc = "0.2"
+
+[profile.release]
+opt-level = 3
+debug = 1
