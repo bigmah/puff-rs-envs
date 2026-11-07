@@ -9,9 +9,11 @@
 use avian2d::prelude::*;
 use bevy::ecs::entity::Entity;
 use bevy::ecs::world::World;
+use bevy::color::Color;
 use bevy::math::Vec2;
 use pufferl::env::{Config, Log};
 
+use crate::view::Mark;
 use crate::{placed, teleport, BevyEnv, Rng};
 
 const FORCE: f32 = 10.0;
@@ -55,6 +57,21 @@ impl BevyEnv for CartPole {
 
     fn act_sizes(&self) -> Vec<usize> {
         vec![2]
+    }
+
+    /// Track ends 2.4 m out and a pole 1 m tall: 6 m apart, arenas never meet
+    fn spacing(&self) -> f32 {
+        6.0
+    }
+
+    /// The track, and its ends
+    fn marks(&self, _world: &World, _arena: &Bodies, origin: Vec2, marks: &mut Vec<Mark>) {
+        let color = Color::srgb(0.55, 0.57, 0.62);
+        let y = origin.y - CART.y / 2.0;
+        marks.push(Mark::Line { from: Vec2::new(origin.x - X_LIMIT, y), to: Vec2::new(origin.x + X_LIMIT, y), color });
+        for end in [-X_LIMIT, X_LIMIT] {
+            marks.push(Mark::Line { from: Vec2::new(origin.x + end, y - 0.15), to: Vec2::new(origin.x + end, y + 0.15), color });
+        }
     }
 
     fn spawn(&self, world: &mut World, origin: Vec2) -> Bodies {

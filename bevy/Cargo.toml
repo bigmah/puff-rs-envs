@@ -19,6 +19,7 @@ path = "src/bench.rs"
 
 [dependencies]
 puff-rs = { git = "https://github.com/bigmah/puff-rs", branch = "main" }
-# Single-threaded inside a world: the vecenv already gives each CPU thread worlds of its own
-bevy = { version = "0.20", default-features = false, features = ["std"] }
+# Windowed 2D for the viewer, but not multi_threaded: a training world runs on one thread,
+# the vecenv giving each CPU thread worlds of its own
+bevy = { version = "0.20", default-features = false, features = ["std", "default_app", "2d_bevy_render", "bevy_winit", "x11"] }
 avian2d = { version = "0.8", default-features = false, features = ["2d", "parry-f32", "xpbd_joints"] }

@@ -12,9 +12,11 @@ use avian2d::prelude::*;
 use bevy::app::App;
 use bevy::ecs::entity::Entity;
 use bevy::ecs::world::World;
+use bevy::color::Color;
 use bevy::math::Vec2;
 use pufferl::env::{Config, Log};
 
+use crate::view::Mark;
 use crate::{placed, teleport, BevyEnv, Rng};
 
 /// Half the room's inside width
@@ -63,6 +65,16 @@ impl BevyEnv for Pusher {
 
     fn act_sizes(&self) -> Vec<usize> {
         vec![5]
+    }
+
+    /// The room and its walls are 9 m across
+    fn spacing(&self) -> f32 {
+        10.0
+    }
+
+    /// The goal
+    fn marks(&self, _world: &World, room: &Room, _origin: Vec2, marks: &mut Vec<Mark>) {
+        marks.push(Mark::Circle { at: room.goal, radius: GOAL_RADIUS, color: Color::srgb(0.2, 0.85, 0.4) });
     }
 
     fn build(&self, app: &mut App) {

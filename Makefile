@@ -1,4 +1,4 @@
-.PHONY: setup trainer build play train eval sm64 sm64-state sm64-train sm64-explore sm64-robustify sm64-speedrun sm64-picture sm64-watch sm64-replay sm64-demo sm64-bench bevy-train bevy-eval bevy-bench bevy-test
+.PHONY: setup trainer build play train eval sm64 sm64-state sm64-train sm64-explore sm64-robustify sm64-speedrun sm64-picture sm64-watch sm64-replay sm64-demo sm64-bench bevy-train bevy-eval bevy-score bevy-bench bevy-test
 
 # Which env to build and train: one in envs/. Each builds into a library of its own
 # (build/cenv_<env>.dylib, or .so), so building one leaves the others as they are.
@@ -125,7 +125,12 @@ BEVY_CARGO = cargo +1.99
 bevy-train:
 	$(BEVY_CARGO) run --release -p puffer-bevy --bin bevy-envs -- train $(BEVY_ENV) $(ARGS)
 
+# Watch the most trained checkpoint play in a window ([env] num_agents arenas)
 bevy-eval:
+	$(BEVY_CARGO) run --release -p puffer-bevy --bin bevy-envs -- eval $(BEVY_ENV) latest $(ARGS)
+
+# The same checkpoint scored over many games, no window
+bevy-score:
 	$(BEVY_CARGO) run --release -p puffer-bevy --bin bevy-envs -- eval $(BEVY_ENV) latest --headless $(ARGS)
 
 bevy-bench:

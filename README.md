@@ -283,8 +283,11 @@ make eval ENV=bloons
 
 ```sh
 make bevy-train BEVY_ENV=bevy_pusher
+make bevy-eval BEVY_ENV=bevy_pusher    # watch it in a window: [env] num_agents arenas, view_speed x real time
 make bevy-bench
 ```
+
+The window (`bevy/src/view.rs`) draws every body from its collider, so a new env shows up with no drawing code; things that aren't bodies (a goal, a track) an env adds through `marks`. Bevy has the main thread and eval runs behind it; closing the window ends eval.
 
 Bevy 0.20 needs rustc 1.97 or newer, so the targets build with `cargo +1.99`; the rest of the repo still builds on stable. The crate is a workspace member of its own, so `cargo build --release` at the top does not compile Bevy.
 

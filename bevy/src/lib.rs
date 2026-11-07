@@ -12,7 +12,7 @@
 //! by despawning and spawning them again: a world that despawns and spawns steadily gets
 //! slower the longer it runs, by half in half a minute.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use avian2d::prelude::*;
 use bevy::app::{App, Main, TaskPoolPlugin};
@@ -27,6 +27,7 @@ use pufferl::env::{Agents, Config, Env, Log};
 
 pub mod cartpole;
 pub mod pusher;
+pub mod view;
 
 pub use avian2d;
 pub use bevy;
@@ -70,6 +71,9 @@ pub trait BevyEnv: Send + 'static {
     /// The reward for the step just taken, the tick-th of the episode, and whether the
     /// episode is over
     fn outcome(&self, world: &World, arena: &mut Self::Arena, origin: Vec2, tick: usize) -> (f32, bool);
+
+    /// What to draw past the bodies, which are drawn from their colliders: a goal, a track
+    fn marks(&self, _world: &World, _arena: &Self::Arena, _origin: Vec2, _marks: &mut Vec<view::Mark>) {}
 
     /// An ended episode into the log: by default its return as the score, and its length
     fn log_episode(&self, log: &mut Log, _arena: &Self::Arena, episode_return: f64, length: usize) {
@@ -142,6 +146,9 @@ pub struct Arenas<E: BevyEnv> {
     rng: Rng,
     log: Log,
     heads: Vec<usize>,
+    /// How many times real time a watched world runs at
+    view_speed: f32,
+    last_render: Option<Instant>,
 }
 
 impl<E: BevyEnv> Arenas<E> {
@@ -165,7 +172,7 @@ impl<E: BevyEnv> Arenas<E> {
         let heads = vec![0; env.act_sizes().len()];
         let side = (count as f64).sqrt().ceil() as usize;
         let spacing = env.spacing();
-        let mut arenas = Self { env, world, slots: Vec::with_capacity(count), rng: Rng::new(index as u64), log: Log::default(), heads };
+        let mut arenas = Self { env, world, slots: Vec::with_capacity(count), rng: Rng::new(index as u64), log: Log::default(), heads, view_speed: 1.0, last_render: None };
         for i in 0..count {
             let origin = Vec2::new((i % side) as f32, (i / side) as f32) * spacing;
             let mut arena = arenas.env.spawn(&mut arenas.world, origin);
@@ -175,8 +182,14 @@ impl<E: BevyEnv> Arenas<E> {
         arenas
     }
 
+    /// [env] arenas of env, or num_agents when a window is watching: eval with a window
+    /// makes one env of num_agents agents, so those are what is on screen. [env]
+    /// view_speed is how many times real time it runs at.
     pub fn from_config(env: E, config: &Config, index: usize) -> Self {
-        Self::new(env, config.size("arenas"), index)
+        let count = if view::watching() { config.size("num_agents") } else { config.size("arenas") };
+        let mut arenas = Self::new(env, count, index);
+        arenas.view_speed = config.num_or("view_speed", 1.0) as f32;
+        arenas
     }
 
     /// A new episode in arena i
@@ -250,6 +263,45 @@ impl<E: BevyEnv> Env for Arenas<E> {
 
     fn log(&mut self) -> &mut Log {
         &mut self.log
+    }
+
+    /// Every body in the world as its collider has it, for the window, at real time
+    fn render(&mut self) {
+        if !view::watching() {
+            return;
+        }
+        let step = Duration::from_secs_f32(self.env.dt() / self.view_speed.max(0.01));
+        if let Some(last) = self.last_render {
+            std::thread::sleep(step.saturating_sub(last.elapsed()));
+        }
+        self.last_render = Some(Instant::now());
+
+        let mut bodies: Vec<(Entity, view::Body)> = Vec::new();
+        let mut query = self.world.query::<(Entity, &Collider, &Position, &Rotation, &RigidBody)>();
+        for (entity, collider, position, rotation, body) in query.iter(&self.world) {
+            let shape = collider.shape_scaled();
+            let outline = if let Some(ball) = shape.as_ball() {
+                view::Outline::Circle(ball.radius)
+            } else if let Some(cuboid) = shape.as_cuboid() {
+                view::Outline::Rect(Vec2::new(cuboid.half_extents.x, cuboid.half_extents.y))
+            } else {
+                let aabb = shape.compute_local_aabb();
+                view::Outline::Rect(Vec2::new(aabb.half_extents().x, aabb.half_extents().y))
+            };
+            bodies.push((entity, view::Body { at: position.0, angle: rotation.as_radians(), outline, dynamic: body.is_dynamic() }));
+        }
+        // In spawn order: a body that sleeps moves to another table, and the window matches
+        // bodies to what it drew by place in the list
+        bodies.sort_by_key(|(entity, _)| *entity);
+        let mut marks = Vec::new();
+        for slot in &self.slots {
+            self.env.marks(&self.world, &slot.arena, slot.origin, &mut marks);
+        }
+        view::show(view::Frame { bodies: bodies.into_iter().map(|(_, body)| body).collect(), marks });
+    }
+
+    fn window_closed(&self) -> bool {
+        view::closed()
     }
 }
 
