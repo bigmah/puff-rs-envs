@@ -413,6 +413,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy-envs"
+version = "0.1.0"
+dependencies = [
+ "puff-rs",
+ "puff-rs-bevy",
+]
+
+[[package]]
 name = "bevy_a11y"
 version = "0.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3994,7 +4002,7 @@ checksum = "3d595e54a326bc53c1c197b32d295e14b169e3cfeaa8dc82b529f947fba6bcf5"
 [[package]]
 name = "puff-rs"
 version = "0.1.0"
-source = "git+https://github.com/bigmah/puff-rs?branch=main#b4f3aaa977312d0e398b6be1bf03414f84798dbb"
+source = "git+https://github.com/bigmah/puff-rs?branch=main#6653cdde0f0bd7e104ebe85818cae6f9f2a8b0a8"
 dependencies = [
  "bytemuck",
  "libc",
@@ -4002,6 +4010,16 @@ dependencies = [
  "puffer-env",
  "rayon",
  "wgpu",
+]
+
+[[package]]
+name = "puff-rs-bevy"
+version = "0.1.0"
+source = "git+https://github.com/bigmah/puff-rs-bevy?branch=main#c5bcfb5ee54b2033f48bf6afbe008fd729af88b5"
+dependencies = [
+ "avian2d",
+ "bevy",
+ "puffer-env",
 ]
 
 [[package]]
@@ -4014,18 +4032,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "puffer-bevy"
-version = "0.1.0"
-dependencies = [
- "avian2d",
- "bevy",
- "puff-rs",
-]
-
-[[package]]
 name = "puffer-env"
 version = "0.1.0"
-source = "git+https://github.com/bigmah/puff-rs?branch=main#b4f3aaa977312d0e398b6be1bf03414f84798dbb"
+source = "git+https://github.com/bigmah/puff-rs?branch=main#6653cdde0f0bd7e104ebe85818cae6f9f2a8b0a8"
 
 [[package]]
 name = "pxfm"

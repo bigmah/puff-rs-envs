@@ -8,16 +8,16 @@
 //! to the room's center and scaled to about [-1, 1].
 //! Actions: one head, 0 nothing, 1 up, 2 down, 3 left, 4 right.
 
-use avian2d::prelude::*;
-use bevy::app::App;
-use bevy::ecs::entity::Entity;
-use bevy::ecs::world::World;
-use bevy::color::Color;
-use bevy::math::Vec2;
+use puffer_bevy::avian2d::prelude::*;
+use puffer_bevy::bevy::app::App;
+use puffer_bevy::bevy::ecs::entity::Entity;
+use puffer_bevy::bevy::ecs::world::World;
+use puffer_bevy::bevy::color::Color;
+use puffer_bevy::bevy::math::Vec2;
 use pufferl::env::{Config, Log};
 
-use crate::view::Mark;
-use crate::{placed, teleport, BevyEnv, Rng};
+use puffer_bevy::view::Mark;
+use puffer_bevy::{placed, teleport, BevyEnv, Rng};
 
 /// Half the room's inside width
 const HALF: f32 = 4.0;

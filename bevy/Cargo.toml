@@ -1,12 +1,12 @@
 [package]
-name = "puffer-bevy"
+name = "bevy-envs"
 version = "0.1.0"
 edition = "2021"
-description = "Envs for puff-rs whose physics is Bevy and Avian: many arenas in one headless world"
+description = "Envs for puff-rs whose physics is Bevy and Avian, on puff-rs-bevy"
 publish = false
 
 [lib]
-name = "puffer_bevy"
+name = "bevy_envs"
 path = "src/lib.rs"
 
 [[bin]]
@@ -19,7 +19,5 @@ path = "src/bench.rs"
 
 [dependencies]
 puff-rs = { git = "https://github.com/bigmah/puff-rs", branch = "main" }
-# Windowed 2D for the viewer, but not multi_threaded: a training world runs on one thread,
-# the vecenv giving each CPU thread worlds of its own
-bevy = { version = "0.20", default-features = false, features = ["std", "default_app", "2d_bevy_render", "bevy_winit", "x11"] }
-avian2d = { version = "0.8", default-features = false, features = ["2d", "parry-f32", "xpbd_joints"] }
+# BevyEnv and Arenas, and the bevy and avian2d it re-exports
+puff-rs-bevy = { git = "https://github.com/bigmah/puff-rs-bevy", branch = "main" }

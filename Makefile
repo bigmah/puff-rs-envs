@@ -123,18 +123,18 @@ BEVY_ENV ?= bevy_pusher
 BEVY_CARGO = cargo +1.99
 
 bevy-train:
-	$(BEVY_CARGO) run --release -p puffer-bevy --bin bevy-envs -- train $(BEVY_ENV) $(ARGS)
+	$(BEVY_CARGO) run --release -p bevy-envs --bin bevy-envs -- train $(BEVY_ENV) $(ARGS)
 
 # Watch the most trained checkpoint play in a window ([env] num_agents arenas)
 bevy-eval:
-	$(BEVY_CARGO) run --release -p puffer-bevy --bin bevy-envs -- eval $(BEVY_ENV) latest $(ARGS)
+	$(BEVY_CARGO) run --release -p bevy-envs --bin bevy-envs -- eval $(BEVY_ENV) latest $(ARGS)
 
 # The same checkpoint scored over many games, no window
 bevy-score:
-	$(BEVY_CARGO) run --release -p puffer-bevy --bin bevy-envs -- eval $(BEVY_ENV) latest --headless $(ARGS)
+	$(BEVY_CARGO) run --release -p bevy-envs --bin bevy-envs -- eval $(BEVY_ENV) latest --headless $(ARGS)
 
 bevy-bench:
-	$(BEVY_CARGO) run --release -p puffer-bevy --bin bevy-bench
+	$(BEVY_CARGO) run --release -p bevy-envs --bin bevy-bench
 
 bevy-test:
-	$(BEVY_CARGO) test --release -p puffer-bevy
+	$(BEVY_CARGO) test --release -p bevy-envs

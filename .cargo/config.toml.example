@@ -1,7 +1,13 @@
-# Train against a puff-rs checkout beside this one instead of the one on GitHub:
+# Train against puff-rs and puff-rs-bevy checkouts beside this one instead of the ones on
+# GitHub:
 #
 #     cp .cargo/config.toml.example .cargo/config.toml
 #
-# .cargo/config.toml is gitignored, so this stays on your machine.
+# .cargo/config.toml is gitignored, so this stays on your machine. Patch puffer-env with
+# puff-rs: puff-rs-bevy's and puff-rs's must be one crate, or the Env trait is two traits.
 [patch."https://github.com/bigmah/puff-rs"]
 puff-rs = { path = "../puff-rs" }
+puffer-env = { path = "../puff-rs/crates/puffer-env" }
+
+[patch."https://github.com/bigmah/puff-rs-bevy"]
+puff-rs-bevy = { path = "../puff-rs-bevy" }
