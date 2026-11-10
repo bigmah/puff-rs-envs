@@ -5,6 +5,7 @@
 
 pub mod pusher;
 pub mod so101;
+pub mod so101_3d;
 
 #[cfg(test)]
 mod tests {
