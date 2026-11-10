@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SO-101 3D · trained policy replay</title>
+<style>
+:root{--bg:#17181d;--panel:#1e2026;--panel-2:#24262e;--panel-3:#2c2f38;--border:#33363f;--border-soft:#2a2d35;--text:#d4d8e0;--text-bright:#e8ecf4;--muted:#9aa0b0;--faint:#848a9c;--accent:#5c9cf5;--accent-soft:rgba(92,156,245,.16);--green:#4fbf7a;--yellow:#e2b34c;--red:#e06c75;--violet:#a78bfa;--green-bg:rgba(79,191,122,.13);--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--r:8px;--r-lg:12px;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 var(--sans)}
+main{max-width:1100px;margin:0 auto;padding:16px}
+@media(min-width:640px){main{padding:28px}}
+h1{font-size:22px;font-weight:650;letter-spacing:-.01em;color:var(--text-bright);margin:0 0 4px}
+.sub{color:var(--muted);font-size:14px;margin:0 0 16px}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint)}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+@media(min-width:640px){.stats{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.stat{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:10px 14px;min-width:0}
+.stat b{display:block;font-size:28px;font-weight:650;color:var(--text-bright);font-variant-numeric:tabular-nums;line-height:1.2}
+.stat b.sm{font-size:20px;padding-top:6px}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:999px;background:var(--panel-3);color:var(--muted);margin-top:8px}
+.pill.on{background:var(--green-bg);color:var(--green)}
+.layout{display:grid;gap:12px}
+@media(min-width:900px){.layout{grid-template-columns:minmax(0,1fr) 260px}}
+.viewer{position:relative;background:#121318;border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;aspect-ratio:4/3}
+@media(min-width:640px){.viewer{aspect-ratio:16/10}}
+.viewer canvas{display:block;width:100%;height:100%;touch-action:none}
+.hud{position:absolute;left:10px;top:8px;font:12px var(--mono);color:var(--muted);pointer-events:none}
+.flash{position:absolute;right:10px;top:8px;font-size:13px;color:var(--green);opacity:0;transition:opacity .25s;pointer-events:none}
+.flash.show{opacity:1}
+.fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--muted)}
+.controls{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:12px;margin-top:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:inherit;font-size:14px;color:var(--text);background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r);min-height:44px;padding:0 14px;cursor:pointer;touch-action:manipulation;transition:background .15s ease,border-color .15s ease}
+button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--text-bright)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(hover:hover){button:hover{background:var(--panel-3)}}
+.play{min-width:92px;font-weight:600}
+.seg{display:flex;gap:6px}
+.track{position:relative;margin:12px 0 2px;height:44px}
+.ticks{position:absolute;left:10px;right:10px;top:4px;height:8px}
+.ticks i{position:absolute;top:0;width:2px;height:8px;background:var(--green);border-radius:1px;opacity:.75}
+input[type=range]{position:absolute;left:0;right:0;bottom:0;width:100%;height:32px;margin:0;accent-color:var(--accent);touch-action:manipulation}
+.side{display:grid;gap:12px;align-content:start}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:12px 14px}
+.joints{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
+@media(min-width:900px){.joints{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.joint{background:var(--panel-2);border-radius:var(--r);padding:6px 8px;min-width:0}
+.joint span{display:block;font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.joint b{font:600 15px var(--mono);color:var(--text-bright);font-variant-numeric:tabular-nums}
+.legend{list-style:none;margin:8px 0 0;padding:0;font-size:14px;color:var(--muted)}
+.legend li{display:flex;gap:8px;align-items:center;margin:4px 0}
+.sw{width:12px;height:12px;border-radius:3px;flex:none}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+</style>
+</head>
+<body>
+<main>
+<h1>SO-101 in 3D, picking and carrying</h1>
+<p class="sub">One real 10&nbsp;s episode of the trained policy (500M steps), recorded from the physics and replayed here. Drag to orbit, pinch or scroll to zoom.</p>
+
+<section class="stats" aria-label="Live stats">
+  <div class="stat"><span class="label">Goals reached</span><b id="sGoals">0</b></div>
+  <div class="stat"><span class="label">Time</span><b id="sTime" class="sm">0.0 s</b></div>
+  <div class="stat"><span class="label">Cube</span><br><span id="sHeld" class="pill">Reaching</span></div>
+  <div class="stat"><span class="label">Eval average</span><b class="sm">26.8 / ep</b></div>
+</section>
+
+<div class="layout">
+<div>
+  <div class="viewer" id="viewer">
+    <div class="hud" id="hud">frame 0 / 250</div>
+    <div class="flash" id="flash">+1 goal</div>
+    <div class="fallback" id="fallback">The 3D view needs three.js from jsDelivr, which didn’t load here. The stats and timeline still show the run.</div>
+  </div>
+  <div class="controls">
+    <div class="row">
+      <button class="play" id="play" aria-pressed="false">Play</button>
+      <div class="seg" role="group" aria-label="Speed">
+        <button data-speed="0.25" aria-pressed="false">¼×</button>
+        <button data-speed="0.5" aria-pressed="true">½×</button>
+        <button data-speed="1" aria-pressed="false">1×</button>
+      </div>
+    </div>
+    <div class="track">
+      <div class="ticks" id="ticks" aria-hidden="true"></div>
+      <input type="range" id="scrub" min="0" max="249" step="0.01" value="0" aria-label="Time in episode">
+    </div>
+    <div class="row">
+      <span class="label" style="margin-right:4px">View</span>
+      <button data-cam="persp" aria-pressed="true">¾ view</button>
+      <button data-cam="side" aria-pressed="false">Side</button>
+      <button data-cam="top" aria-pressed="false">Top</button>
+      <button id="trail" aria-pressed="true">Trail</button>
+    </div>
+  </div>
+</div>
+<aside class="side">
+  <div class="card">
+    <span class="label">Servo angles</span>
+    <div class="joints" id="joints"></div>
+  </div>
+  <div class="card">
+    <span class="label">What you’re seeing</span>
+    <ul class="legend">
+      <li><span class="sw" style="background:#ffc726"></span>Arm, real SO-101 sizes and limits</li>
+      <li><span class="sw" style="background:#e5404d"></span>Cube, 32&nbsp;mm, 30&nbsp;g</li>
+      <li><span class="sw" style="background:#e2b34c"></span>Goal, turns green while held</li>
+      <li><span class="sw" style="background:#5c9cf5"></span>Cube trail, last 1&nbsp;s</li>
+    </ul>
+    <p class="note">Green ticks on the timeline are goals reached. Each one spawns a new goal 6&nbsp;cm or more away. The cube is held by squeeze and friction alone.</p>
+  </div>
+</aside>
+</div>
+</main>
+
+<script>window.D = {"J":[125,7,196,59,-177,507,245,-73,278,-111,-214,598,450,-170,385,-187,-160,590,478,-179,482,-302,-60,600,600,-233,608,-381,32,600,701,-304,686,-520,130,600,741,-404,681,-618,233,596,626,-540,566,-716,336,596,479,-681,478,-819,449,596,505,-721,420,-921,544,594,461,-742,433,-995,513,585,405,-754,472,-1034,626,481,389,-756,471,-1007,630,388,386,-772,475,-1004,573,287,352,-745,471,-1017,525,299,330,-635,496,-1029,525,306,305,-523,548,-1091,525,321,261,-524,529,-1091,525,310,164,-457,479,-1116,525,351,65,-432,361,-1216,525,331,-33,-408,247,-1316,525,309,-132,-422,282,-1303,525,330,-233,-305,264,-1343,525,388,-335,-360,229,-1265,525,553,-433,-511,244,-1140,525,337,-528,-501,236,-1167,537,309,-636,-366,243,-1167,536,319,-686,-193,193,-1289,561,402,-668,-244,156,-1279,573,306,-794,-263,119,-1279,573,303,-830,-158,120,-1279,573,320,-773,1,17,-1402,520,374,-696,-64,7,-1391,465,319,-681,30,7,-1391,473,315,-692,235,-16,-1445,472,394,-694,211,-30,-1417,497,310,-814,23,79,-1309,497,331,-855,18,134,-1179,497,262,-855,-97,196,-1126,497,286,-880,-241,251,-1055,497,314,-855,-274,308,-1055,497,326,-797,-255,329,-1079,497,315,-722,-73,290,-1164,427,390,-653,11,205,-1242,397,502,-557,21,105,-1265,408,298,-464,156,8,-1366,330,287,-338,234,18,-1389,321,304,-267,347,18,-1413,344,319,-245,388,6,-1437,357,327,-233,398,-22,-1461,357,335,-233,410,-44,-1485,357,324,-176,379,-67,-1497,357,314,-68,329,-103,-1497,269,375,-37,310,-160,-1509,307,338,64,397,-186,-1510,319,238,172,438,-167,-1509,318,335,214,513,-203,-1521,319,272,239,535,-211,-1521,319,286,263,621,-158,-1509,331,336,263,540,-83,-1439,355,265,275,530,25,-1318,379,294,275,502,46,-1249,403,339,275,306,147,-1183,415,336,299,263,208,-1061,427,312,323,199,240,-968,451,422,401,82,294,-884,475,330,385,8,293,-861,475,377,385,-130,318,-837,475,310,471,-225,380,-720,487,303,471,-205,358,-735,499,372,471,-323,341,-799,499,310,471,-442,317,-823,499,292,471,-449,253,-886,523,343,365,-493,198,-873,523,228,242,-477,220,-897,523,294,168,-460,232,-921,535,308,44,-423,257,-921,535,340,-34,-471,279,-897,535,317,-153,-498,334,-872,535,323,-242,-509,354,-849,535,300,-349,-547,341,-825,535,314,-445,-523,342,-825,535,322,-546,-521,342,-825,535,321,-646,-466,340,-837,535,312,-704,-291,288,-907,535,423,-759,-237,216,-1002,535,377,-765,-200,135,-1102,535,308,-789,-92,112,-1073,535,304,-789,48,118,-1097,535,320,-776,96,81,-1159,535,311,-645,200,93,-1232,535,359,-575,222,34,-1245,434,269,-461,245,38,-1269,435,292,-465,316,-62,-1294,447,315,-374,143,-49,-1226,458,301,-302,88,-20,-1130,459,318,-190,-2,14,-1035,483,237,-89,-89,65,-1019,507,289,6,-166,91,-1006,531,333,114,-315,141,-906,555,308,142,-322,164,-919,579,346,160,-345,164,-869,602,271,88,-311,189,-893,553,306,-24,-305,187,-893,590,319,-112,-334,187,-893,613,319,-223,-332,188,-881,637,322,-316,-357,187,-857,661,319,-421,-374,187,-833,685,315,-518,-356,188,-821,709,320,-500,-243,147,-846,732,371,-389,-262,126,-870,671,311,-286,-371,137,-893,632,310,-190,-374,162,-917,632,315,-88,-388,185,-941,561,318,16,-338,163,-965,533,341,117,-394,126,-989,432,311,204,-402,159,-1013,433,309,319,-299,162,-1076,457,353,411,-347,130,-1075,480,312,515,-379,158,-1087,505,312,614,-360,169,-1111,529,339,714,-388,182,-1135,553,296,815,-412,205,-1159,577,314,914,-432,217,-1171,601,318,874,-425,205,-1147,613,308,746,-336,218,-1171,562,337,653,-288,155,-1159,625,315,563,-250,145,-1135,625,321,453,-235,144,-1111,625,318,363,-232,81,-1099,625,314,256,-208,70,-1075,625,332,160,-237,45,-1051,625,316,56,-236,21,-1027,625,320,-41,-262,-3,-1003,625,315,-142,-237,18,-979,625,314,-243,-219,60,-1017,625,324,-340,-312,35,-993,625,315,-442,-389,138,-968,625,327,-547,-368,136,-957,625,324,-640,-347,109,-945,625,316,-745,-336,97,-957,625,318,-795,-313,99,-957,625,318,-723,-203,124,-969,625,320,-607,-142,86,-1007,625,321,-518,-136,73,-1031,624,313,-415,-129,98,-1055,625,338,-312,-168,123,-1067,625,290,-216,-139,189,-1067,624,344,-117,-245,209,-975,564,461,-71,-356,270,-904,519,185,67,-424,281,-905,525,272,141,-494,290,-865,424,291,259,-538,392,-867,437,312,307,-546,393,-758,461,301,325,-390,352,-853,473,372,404,-323,259,-930,422,359,430,-248,70,-1030,366,309,589,-144,19,-1130,373,308,650,2,-47,-1230,315,341,763,69,-149,-1254,323,300,807,134,-151,-1277,323,314,838,269,-111,-1289,335,319,855,308,-99,-1313,335,315,842,414,-158,-1338,347,358,717,441,-272,-1350,347,303,642,446,-261,-1349,359,306,521,572,-260,-1349,359,321,434,560,-261,-1349,371,316,324,615,-260,-1349,371,321,231,629,-284,-1349,383,318,128,653,-284,-1349,383,319,28,643,-302,-1349,383,321,-71,614,-296,-1349,383,320,-171,632,-296,-1349,383,319,-212,618,-285,-1349,383,319,-96,593,-273,-1349,303,287,8,501,-272,-1349,283,302,103,548,-245,-1349,295,310,209,548,-261,-1373,318,320,305,517,-261,-1373,331,313,406,514,-261,-1386,355,317,504,491,-261,-1385,367,317,603,488,-264,-1344,390,317,646,552,-214,-1222,415,325,677,527,-195,-1118,439,309,692,504,-191,-1046,439,299,624,463,-126,-1023,463,286,516,346,-153,-999,487,305,424,260,-177,-975,487,310,322,153,-201,-951,487,319,222,31,-175,-927,487,309,120,-18,-88,-903,487,339,20,-162,-30,-802,511,302,-88,-222,-1,-760,511,354,-185,-325,8,-703,535,331,-247,-379,11,-691,547,310,-261,-378,24,-667,571,314,-153,-337,61,-691,595,342,-59,-389,79,-691,619,288,48,-403,108,-715,643,331,145,-458,121,-715,655,275,150,-536,169,-677,667,298,138,-469,194,-689,667,304,114,-314,87,-790,691,372,104,-400,81,-851,715,185,66,-377,-2,-852,715,232,-13,-386,7,-851,665,305,-128,-266,8,-863,665,315,-220,-165,-31,-971,665,380,-321,-232,-78,-963,665,296,-424,-208,-67,-963,665,306,-519,-32,-88,-1015,665,338,-617,-11,-128,-1075,665,324,-724,-37,-158,-1063,665,317,-757,13,-127,-992,665,330,-712,-39,-108,-886,609,310,-620,-112,-93,-851,549,338,-549,-65,-85,-839,514,262,-572,3,-123,-942,515,365,-596,66,-194,-1036,515,301,-620,177,-242,-1063,515,304,-644,342,-273,-1126,515,367,-597,314,-300,-1149,539,309,-467,185,-275,-1079,539,212,-388,160,-242,-1087,539,310,-282,121,-226,-1087,551,308,-178,240,-192,-1087,551,316,-90,357,-170,-1111,551,349,21,345,-164,-1111,551,312,117,363,-108,-1099,551,359,214,252,-70,-998,551,307,317,273,-36,-937,551,318,369,239,-24,-961,551,295,434,178,-12,-961,551,290,427,236,-3,-1024,488,323,371,235,-125,-1061,500,495,243,174,-215,-1099,501,329,162,167,-299,-1179,501,316,56,148,-417,-1173,501,322,-52,129,-453,-1173,501,314,7,217,-413,-1149,500,337,104,196,-379,-1048,432,278,211,310,-339,-987,401,328,315,371,-316,-1011,294,313,395,329,-332,-1035,300,404,448,285,-328,-1047,301,274,589,343,-246,-1059,301,291,650,454,-242,-950,325,310,718,470,-220,-858,349,332,790,488,-208,-883,373,307],"C":[260,16,-86,0,667,0,745,260,16,-86,0,667,0,745,260,16,-86,0,667,0,745,260,16,-86,0,667,0,745,260,16,-86,0,667,0,745,260,16,-86,0,667,0,745,260,16,-86,0,667,0,745,260,16,-86,0,667,0,745,260,16,-86,0,667,0,745,260,16,-86,0,667,0,745,260,16,-86,0,667,0,745,260,16,-86,0,667,0,745,251,21,-84,-110,599,107,786,243,25,-81,-130,582,133,791,246,30,-71,-92,622,98,771,258,61,-69,-100,617,166,763,263,99,-63,-131,599,192,767,262,93,-52,-150,590,148,780,262,102,-26,-168,514,129,831,232,82,4,-125,539,-32,833,200,60,24,-85,479,-69,871,205,61,46,-90,437,-47,894,201,76,66,-126,379,-35,916,203,77,87,-68,297,-56,951,205,54,99,-36,286,-61,956,194,45,113,-79,236,-88,964,187,74,139,-141,170,-90,971,167,103,144,-135,128,-176,967,151,87,131,-109,193,-232,947,130,76,146,-81,92,-246,961,126,96,155,-126,49,-225,965,123,110,129,-87,20,-290,953,129,96,115,-120,178,-314,925,132,111,114,-150,166,-288,931,124,143,114,-193,139,-248,939,121,140,110,-180,119,-274,937,127,132,146,-177,57,-266,946,122,136,165,-253,34,-189,948,134,131,179,-230,5,-196,953,140,111,198,-248,20,-170,954,155,116,199,-250,30,-132,959,164,120,190,-253,54,-136,956,172,150,171,-339,76,-79,934,162,167,140,-378,129,-77,914,152,163,105,-160,275,-133,939,146,163,77,-207,336,-138,908,147,174,62,-222,412,-26,883,142,190,50,-251,420,18,872,138,192,47,-234,438,35,868,136,187,46,-214,444,19,870,131,184,43,-199,432,-8,880,131,175,39,-164,482,9,860,138,159,21,-140,570,43,809,141,134,6,-156,552,-39,818,130,127,-8,-130,606,46,783,139,137,-18,-131,652,94,740,129,134,-23,-140,654,111,735,130,133,-25,-141,664,106,727,135,158,-30,-165,640,185,727,146,163,-34,-182,634,203,724,166,196,-40,-222,603,304,703,170,211,-40,-186,604,314,709,198,204,-49,-216,569,355,709,212,221,-60,-231,566,392,687,218,238,-71,-208,501,433,720,222,235,-82,-167,424,416,787,233,221,-81,-214,503,378,747,244,188,-88,-239,593,356,682,251,189,-117,-215,600,394,662,252,195,-118,-205,577,371,698,242,149,-116,-187,631,263,706,241,109,-115,-172,645,220,711,233,91,-111,-132,642,155,740,227,65,-87,-141,634,91,755,243,72,-56,-152,573,92,800,248,76,-36,-158,544,90,819,257,91,-3,-175,485,107,850,257,86,17,-170,450,110,870,263,90,50,-192,400,125,887,260,93,73,-187,350,164,903,252,80,102,-194,318,152,916,241,87,128,-212,270,146,928,226,86,153,-217,227,131,940,208,97,176,-233,173,141,946,191,132,189,-268,154,154,939,168,129,176,-207,120,128,962,147,108,159,-170,119,21,978,142,124,165,-208,106,82,969,138,157,162,-258,96,113,955,134,153,150,-238,103,82,962,144,173,128,-242,163,115,950,151,168,101,-219,268,137,928,161,171,83,-218,306,145,915,148,165,80,-199,312,144,918,167,138,71,-162,364,114,910,189,136,66,-188,377,138,896,205,135,36,-182,395,121,892,220,127,20,-184,439,142,868,231,120,-2,-143,459,152,863,246,99,-33,-184,486,83,850,250,103,-37,-180,477,71,857,248,96,-46,-195,492,79,845,255,109,-24,-225,475,78,847,257,110,4,-198,411,103,884,255,102,29,-196,366,79,906,252,104,57,-202,298,68,930,248,97,82,-202,246,55,946,239,93,109,-204,192,37,959,229,99,134,-212,126,34,969,220,112,135,-242,115,-37,963,223,99,102,-241,198,-58,948,229,71,80,-215,265,-95,935,236,71,59,-221,310,-94,920,244,74,31,-225,388,-67,891,244,82,5,-231,445,-44,864,230,59,-24,-218,535,-70,813,230,60,-44,-222,575,-58,785,225,86,-70,-220,597,-21,771,206,72,-90,-216,652,-52,725,197,68,-110,-213,675,-57,704,188,74,-127,-209,700,-42,682,169,65,-144,-212,730,-55,648,155,64,-158,-210,758,-60,615,138,61,-175,-201,781,-56,589,145,60,-172,-200,762,-52,613,173,79,-148,-219,734,-15,642,178,80,-129,-150,693,5,705,193,88,-112,-162,656,21,737,206,91,-90,-174,606,20,776,208,80,-71,-176,572,-22,801,217,84,-47,-199,530,-36,824,217,74,-26,-180,483,-57,855,217,71,-2,-193,440,-84,873,213,61,22,-198,394,-139,887,215,70,46,-218,336,-150,904,214,82,67,-204,288,-115,929,198,57,87,-179,254,-182,933,204,58,115,-185,197,-170,948,193,67,135,-174,143,-154,962,177,64,152,-180,98,-173,963,159,63,168,-164,55,-173,970,148,65,178,-173,24,-184,967,165,95,172,-226,46,-123,965,180,105,142,-217,118,-59,967,189,94,124,-203,171,-44,963,201,103,106,-205,224,-24,952,211,93,82,-206,269,-40,940,229,117,67,-233,311,18,921,242,124,47,-214,321,84,919,243,110,24,-222,322,133,911,251,101,-7,-203,461,126,855,255,87,-26,-196,562,111,796,264,99,-60,-200,594,144,766,270,103,-78,-215,593,183,754,264,129,-79,-240,569,173,767,233,128,-83,-357,586,-41,726,201,98,-82,-330,631,-78,698,172,101,-103,-322,700,-86,632,153,112,-107,-348,738,-89,571,127,103,-108,-365,802,-105,460,122,111,-115,-362,778,-92,506,119,142,-120,-379,754,-6,536,115,149,-119,-378,756,9,534,111,156,-112,-370,730,-10,574,110,138,-92,-401,687,-96,598,118,139,-85,-400,671,-98,616,125,158,-67,-403,618,-56,673,131,155,-55,-390,595,-74,699,134,163,-39,-392,546,-64,738,136,160,-25,-375,518,-74,765,136,162,-10,-372,474,-81,794,137,157,3,-361,439,-112,815,137,154,17,-350,403,-133,835,134,156,30,-348,358,-144,855,134,155,37,-340,343,-148,863,138,152,14,-326,416,-104,842,144,140,2,-336,499,-106,792,145,153,-12,-351,525,-61,773,138,151,-26,-349,550,-85,754,137,144,-41,-350,592,-83,721,131,144,-53,-343,625,-71,698,126,139,-66,-344,658,-65,667,124,139,-81,-348,679,-36,645,132,168,-97,-356,642,76,675,135,180,-99,-371,685,123,615,140,182,-108,-368,640,149,658,149,195,-106,-350,623,175,677,170,171,-92,-316,601,127,723,182,150,-75,-304,586,83,747,190,126,-53,-266,576,57,771,199,107,-33,-240,550,32,799,218,119,-16,-237,488,68,837,232,108,2,-231,445,65,863,243,100,29,-232,392,84,886,243,80,52,-199,360,111,904,238,64,68,-192,345,94,914,244,67,72,-198,325,117,917,257,84,47,-208,355,134,902,261,73,14,-182,404,142,885,263,75,-8,-181,431,123,875,258,60,-35,-174,476,106,856,268,50,-34,-173,468,115,859,276,71,-30,-186,451,155,859,260,86,-21,-162,401,110,895,231,56,-26,-137,460,72,874,226,47,-14,-134,455,41,880,229,44,14,-134,425,44,894,231,69,42,-165,354,72,918,214,83,62,-151,295,8,943,190,62,76,-138,262,-74,952,183,66,98,-151,215,-73,962,174,98,114,-183,122,-56,974,151,98,120,-160,97,-185,965,132,85,134,-136,57,-224,964,136,104,149,-184,13,-167,968,156,107,147,-200,-14,-204,958,175,97,137,-254,88,-268,925,186,102,124,-297,116,-250,914,173,110,126,-267,107,-294,912,153,92,116,-238,124,-344,900,147,100,115,-246,100,-341,902,141,123,115,-240,43,-325,914,132,111,102,-247,85,-430,864,157,88,77,-261,117,-411,866,168,94,76,-299,172,-420,840,180,86,56,-304,216,-424,825,192,114,40,-372,209,-388,817,192,143,27,-406,231,-322,824,190,139,5,-421,270,-312,808,198,161,-11,-450,288,-248,808,205,155,-30,-477,308,-256,782,210,174,-53,-493,330,-160,789,203,168,-68,-449,358,-176,800,205,156,-82,-472,401,-159,769,200,169,-74,-507,416,-136,743,193,156,-50,-597,496,-215,593,175,114,-26,-443,405,-386,700,158,91,-13,-424,386,-458,679,142,68,6,-378,377,-521,666,131,57,23,-338,359,-549,675,148,77,14,-380,351,-484,706,161,88,-3,-442,372,-431,694,178,118,-26,-503,368,-314,716,173,130,-39,-652,440,-212,580,169,131,-60,-558,495,-262,612,156,118,-70,-531,514,-248,626,150,145,-97,-554,525,-150,628,149,176,-110,-580,473,-72,660,142,198,-136,-568,434,-45,698,130,198,-145,-551,500,27,667],"K":"0000000000000011111111001110111111011011111001111111010111111111001110111011111111110011110011110111111111111011111111111111111111111111111111111111000111011110111111111111111011111111011111111111111111110011011111111001111011111111111011111110011111","E":"0000000000000000100000000000010000100000100000000010000001000000000010001000000000100000100001000000010000001000000000000001000000000000000010010000000001000000001000000000010000000100010000000001000001000010000001000100010010000100010000010000000010","G":[[0,273,99,-42],[17,108,83,156],[30,100,152,98],[35,163,101,208],[40,126,179,23],[51,127,155,-23],[58,267,198,-127],[69,228,79,-120],[72,231,86,175],[83,120,160,154],[89,135,173,75],[93,262,86,-40],[101,228,98,152],[108,127,57,-190],[123,140,50,179],[141,183,92,114],[144,283,105,-83],[153,103,164,-105],[163,123,162,48],[174,104,138,-79],[182,149,196,-118],[185,257,57,77],[196,285,63,-37],[202,224,59,39],[207,114,105,148],[214,192,112,128],[218,118,128,106],[222,188,76,60],[225,207,165,-20],[229,200,169,-89],[233,119,58,34],[239,118,191,-146],[249,152,179,98]],"n":250};</script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script>
+// Everything that doesn't need three.js: state, timeline, readouts
+(function(){
+  const D = window.D, N = D.n, FPS = 25;
+  const names = ['Pan','Lift','Elbow','Wrist flex','Wrist roll','Gripper'];
+  const jointsEl = document.getElementById('joints');
+  jointsEl.innerHTML = names.map((n,i)=>`<div class="joint"><span>${n}</span><b id="j${i}">0</b></div>`).join('');
+  const ev = [...D.E].map(Number), held = [...D.K].map(Number);
+  const cum = []; let c = 0; for (let i=0;i<N;i++){ c += ev[i]; cum.push(c); }
+  const ticks = document.getElementById('ticks');
+  ticks.innerHTML = ev.map((e,i)=> e ? `<i style="left:${(i/(N-1)*100).toFixed(2)}%"></i>` : '').join('');
+  const S = window.S = { f:0, playing:false, speed:0.5, onFrame:[] };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = id => document.getElementById(id);
+  const scrub = $('scrub'), play = $('play');
+  let lastCount = 0, flashTimer = 0;
+  S.setFrame = function(f){
+    S.f = Math.max(0, Math.min(N-1, f));
+    const i = Math.floor(S.f);
+    scrub.value = S.f;
+    $('sGoals').textContent = cum[i];
+    $('sTime').textContent = (S.f/FPS).toFixed(1) + ' s';
+    $('hud').textContent = `frame ${i+1} / ${N}`;
+    const h = held[i]; const p = $('sHeld');
+    p.textContent = h ? 'Holding' : 'Reaching'; p.className = 'pill' + (h ? ' on' : '');
+    for (let k=0;k<5;k++) $('j'+k).textContent = (D.J[i*6+k]/1000*180/Math.PI).toFixed(0) + '°';
+    $('j5').textContent = (D.J[i*6+5]/10).toFixed(0) + ' mm';
+    if (cum[i] > lastCount && S.playing){ const fl=$('flash'); fl.classList.add('show'); clearTimeout(flashTimer); flashTimer=setTimeout(()=>fl.classList.remove('show'),500); }
+    lastCount = cum[i];
+    S.onFrame.forEach(fn=>fn(S.f));
+  };
+  S.toggle = function(on){
+    S.playing = on === undefined ? !S.playing : on;
+    play.textContent = S.playing ? 'Pause' : 'Play';
+    play.setAttribute('aria-pressed', S.playing);
+    if (S.playing && S.f >= N-1) S.setFrame(0);
+  };
+  play.addEventListener('click', ()=>S.toggle());
+  scrub.addEventListener('input', ()=>{ S.toggle(false); S.setFrame(+scrub.value); });
+  document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click', ()=>{
+    S.speed = +b.dataset.speed;
+    document.querySelectorAll('[data-speed]').forEach(x=>x.setAttribute('aria-pressed', x===b));
+  }));
+  document.addEventListener('keydown', e=>{ if (e.code==='Space' && e.target.tagName!=='BUTTON' && e.target.tagName!=='INPUT'){ e.preventDefault(); S.toggle(); } });
+  let last = performance.now();
+  function tick(now){
+    const dt = Math.min(0.1, (now-last)/1000); last = now;
+    if (S.playing){
+      let f = S.f + dt*FPS*S.speed;
+      if (f >= N-1){ f = 0; lastCount = 0; }
+      S.setFrame(f);
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  S.setFrame(0);
+  if (!reduce) S.toggle(true);
+  setTimeout(()=>{ if (!window.__three) document.getElementById('fallback').style.display='flex'; }, 8000);
+})();
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+const D = window.D, S = window.S, N = D.n;
+const viewer = document.getElementById('viewer');
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+viewer.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x121318);
+const camera = new THREE.PerspectiveCamera(38, 4/3, 0.01, 10);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.minDistance = 0.2; controls.maxDistance = 2.5;
+const target = new THREE.Vector3(0.13, 0.08, -0.02);
+controls.target.copy(target);
+const cams = { persp:[0.62,0.42,0.52], side:[0.14,0.16,0.78], top:[0.13,0.85,0.0001] };
+function setCam(k){ camera.position.set(...cams[k]); controls.target.copy(target); controls.update();
+  document.querySelectorAll('[data-cam]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.cam===k)); }
+document.querySelectorAll('[data-cam]').forEach(b=>b.addEventListener('click', ()=>setCam(b.dataset.cam)));
+setCam('persp');
+
+scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x20222a, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(0.5, 1.2, 0.6); sun.castShadow = true;
+sun.shadow.mapSize.set(1024,1024);
+Object.assign(sun.shadow.camera, { left:-0.5, right:0.6, top:0.5, bottom:-0.5, near:0.1, far:3 });
+scene.add(sun);
+
+const mat = c => new THREE.MeshStandardMaterial({ color:c, roughness:0.65, metalness:0.05 });
+function box(size, color, cast=true){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(...size), mat(color));
+  m.castShadow = cast; m.receiveShadow = true; scene.add(m); return m;
+}
+// Table and base
+const table = box([0.6,0.04,0.8], 0x2c2f38, false); table.position.set(0.15,-0.02,0);
+const grid = new THREE.GridHelper(0.8, 16, 0x3a3e49, 0x30333c); grid.position.set(0.15,0.0005,0); scene.add(grid);
+const base = box([0.07,0.0624,0.07], 0xd9a920); base.position.set(0,0.0312,0);
+
+// The arm, as so101_3d.rs has it: every link unturned at the zero pose
+const BASE_H=0.0624,SH=0.1166,UP=0.116,FO=0.135,WR=0.06,HA=0.10,HW=0.03,HD=0.03,JAW=0.055,JW=0.01,LW=0.026;
+const V = (x,y,z)=>new THREE.Vector3(x,y,z);
+const elbow=V(0,SH+UP,0), wrist=V(FO,SH+UP,0), roll=V(FO+WR,SH+UP,0);
+const links = [
+  [V(0,(BASE_H+SH)/2,0), [0.04,SH-BASE_H,0.05], 0xffc726],
+  [V(0,SH+UP/2,0), [LW,UP,LW], 0xffc726],
+  [elbow.clone().add(V(FO/2,0,0)), [FO,LW,LW], 0xffc726],
+  [wrist.clone().add(V(WR/2,0,0)), [WR,0.03,0.035], 0x26272c],
+  [roll.clone().add(V(HA/2,-HW/2,0)), [HA,HW,HD], 0xffc726],
+  [roll.clone().add(V(HA-JAW/2,JW/2,0)), [JAW,JW,HD], 0xe8a317],
+];
+const pivots = [[V(0,BASE_H,0),V(0,1,0)],[V(0,SH,0),V(0,0,1)],[elbow,V(0,0,1)],[wrist,V(0,0,1)],[roll,V(1,0,0)]];
+const meshes = links.map(([c,s,col])=>box(s,col));
+const cube = box([0.032,0.032,0.032], 0xe5404d);
+
+const goalMat = new THREE.MeshBasicMaterial({ color:0xe2b34c, transparent:true, opacity:0.35, depthWrite:false });
+const goal = new THREE.Mesh(new THREE.SphereGeometry(0.02, 24, 16), goalMat); scene.add(goal);
+const goalRing = new THREE.Mesh(new THREE.SphereGeometry(0.0205, 12, 8), new THREE.MeshBasicMaterial({ color:0xe2b34c, wireframe:true, transparent:true, opacity:0.6 }));
+scene.add(goalRing);
+const toGoal = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0,0,0),V(0,0,0)]), new THREE.LineDashedMaterial({ color:0x4fbf7a, dashSize:0.006, gapSize:0.004 }));
+scene.add(toGoal);
+
+const TRAIL = 25;
+const trailGeo = new THREE.BufferGeometry(); trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL*3), 3));
+const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color:0x5c9cf5, transparent:true, opacity:0.8 }));
+scene.add(trail);
+let showTrail = true;
+const trailBtn = document.getElementById('trail');
+trailBtn.addEventListener('click', ()=>{ showTrail = !showTrail; trailBtn.setAttribute('aria-pressed', showTrail); trail.visible = showTrail; });
+
+const q = new THREE.Quaternion(), rq = new THREE.Quaternion(), tmp = new THREE.Vector3();
+function joint(i,k){ const a = D.J[Math.floor(i)*6+k], b = D.J[Math.min(N-1,Math.floor(i)+1)*6+k]; const u = i-Math.floor(i); return (a+(b-a)*u); }
+function cubeAt(i, pos, rot){
+  const f = Math.floor(i), g = Math.min(N-1,f+1), u = i-f;
+  const A = D.C.slice(f*7,f*7+7), B = D.C.slice(g*7,g*7+7);
+  pos.set(A[0]+(B[0]-A[0])*u, A[1]+(B[1]-A[1])*u, A[2]+(B[2]-A[2])*u).multiplyScalar(0.001);
+  if (rot){ const qa = new THREE.Quaternion(A[3],A[4],A[5],A[6]).normalize(), qb = new THREE.Quaternion(B[3],B[4],B[5],B[6]).normalize(); rot.copy(qa).slerp(qb,u); }
+}
+function goalAt(i){ let g = D.G[0]; for (const x of D.G){ if (x[0] <= i) g = x; else break; } return g; }
+
+function draw(f){
+  // Episode edge: never interpolate across the reset
+  const R = new THREE.Quaternion(), t = new THREE.Vector3();
+  for (let k=0;k<5;k++){
+    const [p,ax] = pivots[k];
+    rq.setFromAxisAngle(ax, joint(f,k)/1000);
+    tmp.copy(p).applyQuaternion(rq); const shift = p.clone().sub(tmp);
+    t.add(shift.applyQuaternion(R)); R.multiply(rq);
+    meshes[k].position.copy(links[k][0]).applyQuaternion(R).add(t); meshes[k].quaternion.copy(R);
+  }
+  const open = joint(f,5)/10000;
+  meshes[5].position.copy(links[5][0]).add(V(0,open,0)).applyQuaternion(R).add(t); meshes[5].quaternion.copy(R);
+  cubeAt(f, cube.position, cube.quaternion);
+  const g = goalAt(Math.floor(f)); goal.position.set(g[1],g[2],g[3]).multiplyScalar(0.001); goalRing.position.copy(goal.position);
+  const isHeld = D.K[Math.floor(f)] === '1';
+  const col = isHeld ? 0x4fbf7a : 0xe2b34c; goalMat.color.setHex(col); goalRing.material.color.setHex(col);
+  toGoal.visible = isHeld;
+  toGoal.geometry.setFromPoints([cube.position.clone(), goal.position.clone()]); toGoal.computeLineDistances();
+  const arr = trailGeo.attributes.position.array, pos = new THREE.Vector3();
+  for (let k=0;k<TRAIL;k++){ cubeAt(Math.max(0, f - (TRAIL-1-k)), pos); arr[k*3]=pos.x; arr[k*3+1]=pos.y; arr[k*3+2]=pos.z; }
+  trailGeo.attributes.position.needsUpdate = true;
+}
+S.onFrame.push(draw);
+draw(S.f);
+
+function resize(){
+  const w = viewer.clientWidth, h = viewer.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(viewer); resize();
+renderer.setAnimationLoop(()=>{ controls.update(); renderer.render(scene, camera); });
+window.__three = true;
+</script>
+</body>
+</html>
