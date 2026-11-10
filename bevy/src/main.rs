@@ -7,11 +7,14 @@
 //! window has the main thread, and eval runs behind it.
 
 use bevy_envs::pusher::Pusher;
+use bevy_envs::so101::So101;
 use puffer_bevy::Arenas;
 use pufferl::{cli, Envs};
 
 fn envs() -> Envs {
-    Envs::new().add("bevy_pusher", include_str!("../config/bevy_pusher.ini"), |config, i| Arenas::from_config(Pusher::new(config), config, i))
+    Envs::new()
+        .add("bevy_pusher", include_str!("../config/bevy_pusher.ini"), |config, i| Arenas::from_config(Pusher::new(config), config, i))
+        .add("bevy_so101", include_str!("../config/bevy_so101.ini"), |config, i| Arenas::from_config(So101::new(config), config, i))
 }
 
 fn main() {

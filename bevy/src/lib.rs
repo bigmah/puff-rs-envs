@@ -4,6 +4,7 @@
 //! [`BevyEnv`]: puffer_bevy::BevyEnv
 
 pub mod pusher;
+pub mod so101;
 
 #[cfg(test)]
 mod tests {

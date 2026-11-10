@@ -3,7 +3,9 @@
 //!     cargo +1.99 run --release -p bevy-envs --bin bevy-bench [-- --over-time]
 
 use bevy_envs::pusher::Pusher;
+use bevy_envs::so101::So101;
 
 fn main() {
     puffer_bevy::bench::all("pusher", Pusher::new, 200);
+    puffer_bevy::bench::all("so101", So101::new, 500);
 }

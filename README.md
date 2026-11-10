@@ -90,7 +90,7 @@ envs/bloons/          bloons.h (the env, around the bloons repo's native/btd3-en
 envs/platformer/      platformer.h (the env), platformer.c (human play), platformer.ini
 envs/sort/, envs/kronecker_factorization/
 bevy/                 bevy-envs: envs on puff-rs-bevy (Bevy + Avian physics): Pusher,
-                      bevy-envs (pufferl for them), bevy-bench
+                      SO-101, bevy-envs (pufferl for them), bevy-bench
 demos/peach-slide/    the slide's record runs: inputs, route traces, videos, notes
 demos/wild-blue/      Shoot into the Wild Blue's record run
 PLAN-text-agent.md    a plan for a text-prompted agent, frames in and actions out
@@ -279,9 +279,10 @@ make eval ENV=bloons
 `bevy/` is a crate of envs whose physics is [Bevy](https://bevy.org) with [Avian](https://github.com/avianphysics/avian), built on [puff-rs-bevy](https://github.com/bigmah/puff-rs-bevy): that library has the `BevyEnv` trait, `Arenas` (many arenas of an env in one headless world, as one pufferl env), the window that draws them, and a bench. An env here is just a `BevyEnv`. CartPole is puff-rs-bevy's own example.
 
 - **bevy_pusher:** top-down, a round agent shoves a box onto a goal in a walled room. About 93% solved in 100M steps, under a minute, on two seeds of three (seed 73, the default, stays at random's 11%).
+- **bevy_so101:** the SO-101 arm seen from the side, picking a cube up off a table and carrying it to goals in the air, a new goal each time it gets there, for 10 s. The arm's size, weights and joint limits are the real one's (its URDF); shoulder, elbow and wrist are STS3215-like position servos capped at 3 N·m, which the policy steers by nudging each one's target, and the gripper is a jaw that squeezes with 0.6 N, so the cube is held by friction alone. Base pan and wrist roll turn out of the plane and aren't there, and the jaw slides rather than swings. In 300M steps (15 minutes) it grabs the cube in 99.8% of episodes and reaches 46.6 goals in one, about one every 0.2 s; a scripted grab with inverse kinematics reaches 1.3.
 
 ```sh
-make bevy-train
+make bevy-train                       # BEVY_ENV=bevy_so101 for the arm
 make bevy-eval     # watch it in a window: [env] num_agents arenas, view_speed x real time
 make bevy-bench
 make bevy-test
@@ -289,7 +290,7 @@ make bevy-test
 
 Bevy 0.20 needs rustc 1.97 or newer, so the targets build with `cargo +1.99`; the rest of the repo still builds on stable. The crate is a workspace member of its own, so `cargo build --release` at the top does not compile Bevy.
 
-Speed on an M4 Pro (14 cores), physics alone (`make bevy-bench`), with 512 arenas a world: Pusher 2.6M steps/s a thread, 26M on all 14; training, the trainer's own time included, 1.9M.
+Speed on an M4 Pro (14 cores), physics alone (`make bevy-bench`), with 512 arenas a world: Pusher 2.6M steps/s a thread, 26M on all 14; training, the trainer's own time included, 1.9M. SO-101, five bodies and four joints at 8 substeps, 210K a thread and 2.3M on all 14; training 350K with `--vec.num_threads=12`.
 
 ## The platformer
 
